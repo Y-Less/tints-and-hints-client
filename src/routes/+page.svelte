@@ -105,16 +105,24 @@
 		return ret;
 	}
 	
-	if (name === '')
+	function setName(event)
 	{
-		prompt('Enter your name.');
+		if (event.keyCode === 13 || event.type === 'click')
+		{
+			// Pressed enter in the text box.
+			name = document.getElementById('enter-input').value?.trim() ?? '';
+		}
 	}
-
+	
 </script>
 
 <main>
 {#if name === ''}
 	<h1>Enter your name.</h1>
+	<div id="enter-name">
+		<input id="enter-input" type="text" onkeypress={setName} />
+		<button onclick={setName}>OK</button>
+	</div>
 {:else}
 	{#if colour === ''}
 	<h1>Pick your player colour.</h1>
@@ -132,7 +140,6 @@
 	</div>
 		{/if}
 	{/if}
-{/if}
 	
 	<div id="colour_grid">
 		<div class="row">
@@ -152,6 +159,7 @@
 		</div>
 {/each}
 	</div>
+{/if}
 </main>
 
 <style>
@@ -182,26 +190,41 @@
 		width: 100%;
 		flex-direction: column;
 	}
+	
+	#enter-name
+	{
+		text-align: center;
+	}
+	
+	input, button
+	{
+		max-width: 500px;
+		font-size: 3em;
+		text-align: center;
+	}
 
 	.row
 	{
 		display: flex;
 		width: 100%;
+		flex-flow: row nowrap;
+		justify-content: space-evenly;
+		align-items: stretch;
+		gap: 0;
 	}
 
-	.colour
+	.colour, .top, .left, .hint, .choice
 	{
-		height: 100px;
-		width: 100px;
+		max-height: 100px;
+		max-width: 100px;
+		flex-grow: 1;
 	}
 
 	.top, .left, .hint, .choice
 	{
-		height: 100px;
-		width: 100px;
 		vertical-align: middle;
 		text-align: center;
-		line-height: 100px;
+		line-height: 100%;
 		font-size: 4em;
 	}
 	
