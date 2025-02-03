@@ -1,7 +1,5 @@
 <script lang="ts">
 	import Selection from './selection.svelte';
-
-	let { name } = $props();
 	
 	//let yourTurn = true;
 	
@@ -9,7 +7,22 @@
 	// OK, clearly the documentation is out of date, because that says to use `$state(0)`.
 	let count = $state(1);
 	
-	let guesses = $state([]);
+	let name = $state('');
+	let colour = $state('');
+	
+	let firstGuesses = $state([
+		{ name: 'Alex', colour: '000000', first: true, guess: 'B5' },
+		{ name: 'Alex', colour: '000000', first: true, guess: 'B7' },
+		{ name: 'Alex', colour: '000000', first: true, guess: 'C3' },
+		{ name: 'Alex', colour: '000000', first: true, guess: 'E5' },
+		{ name: 'Alex', colour: '00FF00', first: true, guess: 'E5' },
+	]);
+	
+	let secondGuesses = $state([
+		{ name: 'Alex', colour: '0000FF', first: false, guess: 'E5' },
+		{ name: 'Alex', colour: 'FF0000', first: false, guess: 'E5' },
+		{ name: 'Alex', colour: '000000', first: false, guess: 'G5' },
+	]);
 	
 	function increment()
 	{
@@ -58,8 +71,16 @@
 		const addr = `${col}${row}`;
 		return function()
 		{
-			// Clicked.
-			console.log(`You clicked on ${addr}`);
+			if (colour === '')
+			{
+				// First selection, to choose a player colour.
+				colour = GRID[col][row];
+			}
+			else
+			{
+				// Clicked.
+				console.log(`You clicked on ${addr}`);
+			}
 		}
 	}
 	
@@ -67,7 +88,14 @@
 	{
 		const addr = `${col}${row}`;
 		const ret = [];
-		for (const g of guesses)
+		for (const g of firstGuesses)
+		{
+			if (g.guess === addr)
+			{
+				ret.push(g);
+			}
+		}
+		for (const g of secondGuesses)
 		{
 			if (g.guess === addr)
 			{
@@ -76,21 +104,34 @@
 		}
 		return ret;
 	}
+	
+	if (name === '')
+	{
+		prompt('Enter your name.');
+	}
 
 </script>
 
 <main>
-{#if isYourTurn()}
+{#if name === ''}
+	<h1>Enter your name.</h1>
+{:else}
+	{#if colour === ''}
+	<h1>Pick your player colour.</h1>
+	{:else}
+		{#if isYourTurn()}
 	<h1>Try to give a hint.</h1>
 	<div class="row">
 		<div class="colour choice">Your tint</div><div class="colour hint" style="background-color: #00C000">B1</div>
 	</div>
-{:else}
+		{:else}
 	<h1>Try to guess the tint.</h1>
 	<div class="row">
 		<div class="colour choice">1st choice</div><div class="colour hint" style="background-color: #00C000">B2</div>
 		<div class="colour choice">2nd choice</div><div class="colour hint" style="background-color: #00C000">B2</div>
 	</div>
+		{/if}
+	{/if}
 {/if}
 	
 	<div id="colour_grid">
