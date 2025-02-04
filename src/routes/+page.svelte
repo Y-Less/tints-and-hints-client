@@ -1,40 +1,19 @@
 <script lang="ts">
 	import Selection from './selection.svelte';
 	
-	//let yourTurn = true;
+	const HOST = 'http://localhost';
 	
-	// This is a "rune", a part of the svelte language that tells it that this gets updated.
-	// OK, clearly the documentation is out of date, because that says to use `$state(0)`.
-	let count = $state(1);
+	let gName = $state('');
+	let gColour = $state('');
+	let gTint = $state('');
 	
-	let name = $state('');
-	let colour = $state('');
+	let gFirstGuesses = $state([]);
 	
-	let firstGuesses = $state([
-		{ name: 'Alex', colour: '000000', first: true, guess: 'B5' },
-		{ name: 'Alex', colour: '000000', first: true, guess: 'B7' },
-		{ name: 'Alex', colour: '000000', first: true, guess: 'C3' },
-		{ name: 'Alex', colour: '000000', first: true, guess: 'E5' },
-		{ name: 'Alex', colour: '00FF00', first: true, guess: 'E5' },
-	]);
+	let gSecondGuesses = $state([]);
 	
-	let secondGuesses = $state([
-		{ name: 'Alex', colour: '0000FF', first: false, guess: 'E5' },
-		{ name: 'Alex', colour: 'FF0000', first: false, guess: 'E5' },
-		{ name: 'Alex', colour: '000000', first: false, guess: 'G5' },
-	]);
+	let gID = $state(-1);
 	
-	function increment()
-	{
-		count = count + 1;
-	}
-
-	function isYourTurn()
-	{
-		return count > 5;
-	}
-	
-	let players = $state([
+	let gPlayers = $state([
 		{
 			name: 'Alex',
 			score: 1000,
@@ -79,15 +58,76 @@
 		COLS = Object.keys(GRID),
 		ROWS = Object.keys(GRID.A);
 
+	function get(url)
+	{
+		return new Promise(function (resolve, reject)
+		{
+			fetch(url, { method: 'GET' }).then(function (response)
+			{
+				if (!response.ok) reject(`Response status: ${response.status}`);
+				response.json().then(function (json) { resolve(json); });
+			});
+		});
+	}
+
+	function post(url, body)
+	{
+		return new Promise(function (resolve, reject)
+		{
+			fetch(url, {
+				method: 'POST',
+				body: JSON.stringify(body),
+				headers: { 'Content-Type': 'application/json' },
+			}).then(function (response)
+			{
+				if (!response.ok) reject(`Response status: ${response.status}`);
+				response.json().then(function (json) { resolve(json); });
+			});
+		});
+	}
+	
+	function updateState(state)
+	{
+		console.log(state);
+		const {
+			first,
+			second,
+			//current,
+			id,
+			players,
+			tint,
+		} = state;
+		gFirstGuesses = first;
+		gSecondGuesses = second ?? [];
+		gPlayers = players;
+		gID = id;
+		if (tint == null)
+		{
+			// Clearly it is your turn.
+			gTint = '';
+		}
+		else
+		{
+			gTint = tint;
+		}
+		//if (current === id)
+		//{
+		//	// Also, it is your turn...
+		//}
+	}
+
 	function guess(row, col)
 	{
 		const addr = `${col}${row}`;
 		return function()
 		{
-			if (colour === '')
+			if (gColour === '')
 			{
 				// First selection, to choose a player colour.
-				colour = GRID[col][row];
+				gColour = GRID[col][row];
+				console.log(`assigned ${gColour}`);
+				const url = HOST + ':3000/api/add-player';
+				post(url, { name: gName, colour: gColour }).then(updateState);
 			}
 			else
 			{
@@ -101,14 +141,14 @@
 	{
 		const addr = `${col}${row}`;
 		const ret = [];
-		for (const g of firstGuesses)
+		for (const g of gFirstGuesses)
 		{
 			if (g.guess === addr)
 			{
 				ret.push(g);
 			}
 		}
-		for (const g of secondGuesses)
+		for (const g of gSecondGuesses)
 		{
 			if (g.guess === addr)
 			{
@@ -123,14 +163,14 @@
 		if (event.keyCode === 13 || event.type === 'click')
 		{
 			// Pressed enter in the text box.
-			name = document.getElementById('enter-input').value?.trim() ?? '';
+			gName = document.getElementById('enter-input').value?.trim() ?? '';
 		}
 	}
 	
 </script>
 
 <main>
-{#if name === ''}
+{#if gName === ''}
 	<div id="header">
 		<h1>Enter your name.</h1>
 		<div id="enter-name">
@@ -140,16 +180,16 @@
 	</div>
 {:else}
 	<div id="header">
-	{#if colour === ''}
+	{#if gColour === ''}
 		<h1>Pick your player colour.</h1>
 	{:else}
-		{#if isYourTurn()}
+		{#if gTint === ''}
+		<h1>Try to guess the tint.</h1>
+		{:else}
 		<h1>Try to give a hint.</h1>
 		<div class="row">
 			<div class="colour">Your tint</div><div class="colour hint" style="background-color: #00C000">B1</div>
 		</div>
-		{:else}
-		<h1>Try to guess the tint.</h1>
 		{/if}
 	{/if}
 	</div>
@@ -179,7 +219,7 @@
 		<h2>Scores</h2>
 		<table>
 			<tbody>
-{#each players as i}
+{#each gPlayers as i}
 				<tr>
 					<th style="background-color: #{i.colour}"></th>
 					<td>{i.name}</td>
@@ -197,7 +237,7 @@
 	{
 		text-align: center;
 		display: grid;
-		grid-template-columns: 1fr 400px;
+		grid-template-columns: 1fr 300px;
 		
 		grid-template-areas: 
 			"header header"
@@ -236,8 +276,8 @@
 	#player-grid table
 	{
 		table-layout: fixed;
-		width: 320px;
-		margin-left: 40px;
+		width: 280px;
+		margin-left: 20px;
 	}
 	
 	#player-grid th
