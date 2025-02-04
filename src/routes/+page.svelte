@@ -34,6 +34,19 @@
 		return count > 5;
 	}
 	
+	let players = $state([
+		{
+			name: 'Alex',
+			score: 1000,
+			colour: 'FF0000',
+		},
+		{
+			name: 'Tom',
+			score: 1000,
+			colour: '00FF00',
+		},
+	]);
+	
 	const
 		GRID = {
 			A: ['D0EDD4', '14FAEB', '886C92', 'E72866', '002020', '71AFD7', '7476F0'],
@@ -118,77 +131,124 @@
 
 <main>
 {#if name === ''}
-	<h1>Enter your name.</h1>
-	<div id="enter-name">
-		<input id="enter-input" type="text" onkeypress={setName} />
-		<button onclick={setName}>OK</button>
+	<div id="header">
+		<h1>Enter your name.</h1>
+		<div id="enter-name">
+			<input id="enter-input" type="text" onkeypress={setName} />
+			<button onclick={setName}>OK</button>
+		</div>
 	</div>
 {:else}
+	<div id="header">
 	{#if colour === ''}
-	<h1>Pick your player colour.</h1>
+		<h1>Pick your player colour.</h1>
 	{:else}
 		{#if isYourTurn()}
-	<h1>Try to give a hint.</h1>
-	<div class="row">
-		<div class="colour choice">Your tint</div><div class="colour hint" style="background-color: #00C000">B1</div>
-	</div>
+		<h1>Try to give a hint.</h1>
+		<div class="row">
+			<div class="colour">Your tint</div><div class="colour hint" style="background-color: #00C000">B1</div>
+		</div>
 		{:else}
-	<h1>Try to guess the tint.</h1>
-	<div class="row">
-		<div class="colour choice">1st choice</div><div class="colour hint" style="background-color: #00C000">B2</div>
-		<div class="colour choice">2nd choice</div><div class="colour hint" style="background-color: #00C000">B2</div>
-	</div>
+		<h1>Try to guess the tint.</h1>
 		{/if}
 	{/if}
+	</div>
 	
-	<div id="colour_grid">
-		<div class="row">
-			<div class="left"></div>
+	<table id="colour-grid">
+		<tbody>
+			<tr>
+				<th style="width: {100 / (COLS.length + 1)}%"></th>
 {#each COLS as j}
-			<div class="top">{j}</div>
+				<th style="width: {100 / (COLS.length + 1)}%">{j}</th>
 {/each}
-		</div>
+			</tr>
 {#each ROWS as i}
-		<div class="row">
-			<div class="left">{i}</div>
+			<tr>
+				<th>{i}</th>
 	{#each COLS as j}
-			<div class="colour" style="background-color: #{GRID[j][i]}" onclick={guess(i, j)}>
-				<Selection guesses={getGuesses(i, j)} index={0} />
-			</div>
+				<td style="background-color: #{GRID[j][i]}" onclick={guess(i, j)}>
+					<Selection guesses={getGuesses(i, j)} index={0} />
+				</td>
 	{/each}
-		</div>
+			</tr>
 {/each}
+		</tbody>
+	</table>
+
+	<div id="player-grid">
+		<h2>Scores</h2>
+		<table>
+			<tbody>
+{#each players as i}
+				<tr>
+					<th style="background-color: #{i.colour}"></th>
+					<td>{i.name}</td>
+					<td>{i.score}</td>
+				</tr>
+{/each}
+			</tbody>
+		</table>
 	</div>
 {/if}
 </main>
 
 <style>
-	main {
+	main
+	{
 		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
+		display: grid;
+		grid-template-columns: 1fr 400px;
+		
+		grid-template-areas: 
+			"header header"
+			"main sidebar"
+			"footer footer";
+	}
+	
+	#header
+	{	
+		grid-area: header;
 	}
 
-	h1 {
+	h1
+	{
 		color: #ff3e00;
 		text-transform: uppercase;
 		font-size: 4em;
 		font-weight: 100;
 	}
 
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
-	}
-	
-	#colour_grid
+	#colour-grid
 	{
-		display: flex;
 		height: 100%;
 		width: 100%;
-		flex-direction: column;
+		table-layout: fixed;
+		border-collapse: collapse;
+		grid-area: main;
+	}
+
+	#player-grid
+	{
+		grid-area: sidebar;
+		align-self: start;
+	}
+	
+	#player-grid table
+	{
+		table-layout: fixed;
+		width: 320px;
+		margin-left: 40px;
+	}
+	
+	#player-grid th
+	{
+		width: 30px;
+		height: 30px;
+	}
+	
+	#colour-grid tr
+	{
+		height: 50px;
 	}
 	
 	#enter-name
@@ -203,36 +263,26 @@
 		text-align: center;
 	}
 
-	.row
-	{
-		display: flex;
-		width: 100%;
-		flex-flow: row nowrap;
-		justify-content: space-evenly;
-		align-items: stretch;
-		gap: 0;
-	}
-
-	.colour, .top, .left, .hint, .choice
-	{
-		max-height: 100px;
-		max-width: 100px;
-		flex-grow: 1;
-	}
-
-	.top, .left, .hint, .choice
+	#colour-grid th
 	{
 		vertical-align: middle;
 		text-align: center;
 		line-height: 100%;
-		font-size: 4em;
+		font-size: 2em;
 	}
 	
-	.choice
+	.colour
 	{
 		font-size: 2em;
 		line-height: 1.5em;
 		padding: 0 10px 0 10px;
+		width: 100px;
+		height: 100px;
+	}
+	
+	.row
+	{
+		display: flex;
 	}
 
 	main
