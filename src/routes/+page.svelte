@@ -3,15 +3,21 @@
 	
 	const HOST = 'http://localhost';
 	
-	let gName = $state('');
-	let gColour = $state('');
-	let gTint = $state('');
+	let gName = $state(''); // @hmr:keep
+	let gColour = $state(''); // @hmr:keep
+	let gTint = $state('??'); // @hmr:keep
 	
-	let gFirstGuesses = $state([]);
+	let gFirstGuesses = $state([]); // @hmr:keep
+	let gSecondGuesses = $state(null); // @hmr:keep
 	
-	let gSecondGuesses = $state([]);
+	let gCurrentPlayer = $state(null); // @hmr:keep
 	
-	let gID = $state(-1);
+	let gFirstGuess = $state('??'); // @hmr:keep
+	let gSecondGuess = $state('??'); // @hmr:keep
+	
+	let gID = $state(-1); // @hmr:keep
+	
+	let gTimer = $state(null); // @hmr:keep
 	
 	let gPlayers = $state([
 		{
@@ -24,7 +30,7 @@
 			score: 1000,
 			colour: '00FF00',
 		},
-	]);
+	]); // @hmr:keep
 	
 	const
 		GRID = {
@@ -58,23 +64,34 @@
 		COLS = Object.keys(GRID),
 		ROWS = Object.keys(GRID.A);
 
+	function stringToColour(str)
+	{
+		if (str === '??' || str === '')
+		{
+			return '#FFFFFF';
+		}
+		//console.log('X: "' + str[0] + '"');
+		//console.log('Y: "' + str[1] + '"');
+		return '#' + GRID[str[0]][str[1]];
+	}
+
 	function get(url)
 	{
 		return new Promise(function (resolve, reject)
 		{
-			fetch(url, { method: 'GET' }).then(function (response)
+			fetch(HOST + ':3000' + url, { method: 'GET' }).then(function (response)
 			{
 				if (!response.ok) reject(`Response status: ${response.status}`);
 				response.json().then(function (json) { resolve(json); });
 			});
 		});
 	}
-
+	
 	function post(url, body)
 	{
 		return new Promise(function (resolve, reject)
 		{
-			fetch(url, {
+			fetch(HOST + ':3000' + url, {
 				method: 'POST',
 				body: JSON.stringify(body),
 				headers: { 'Content-Type': 'application/json' },
@@ -88,51 +105,86 @@
 	
 	function updateState(state)
 	{
-		console.log(state);
+		//console.log(state);
 		const {
 			first,
 			second,
-			//current,
+			current,
 			id,
 			players,
 			tint,
 		} = state;
 		gFirstGuesses = first;
-		gSecondGuesses = second ?? [];
+		gSecondGuesses = second;
 		gPlayers = players;
 		gID = id;
-		if (tint == null)
+		gTint = tint;
+		gCurrentPlayer = (current === -1) ? null : gPlayers[current];
+		gFirstGuess = '??';
+		for (const i of gFirstGuesses)
 		{
-			// Clearly it is your turn.
-			gTint = '';
+			if (i.name === gName)
+			{
+				gFirstGuess = i.guess;
+				break;
+			}
+		}
+		if (gSecondGuesses == null)
+		{
+			gSecondGuess = '??';
 		}
 		else
 		{
-			gTint = tint;
+			for (const i of gSecondGuesses)
+			{
+				if (i.name === gName)
+				{
+					gSecondGuess = i.guess;
+					break;
+				}
+			}
 		}
-		//if (current === id)
-		//{
-		//	// Also, it is your turn...
-		//}
+		//console.log('gFirstGuesses :', gFirstGuesses );
+		//console.log('gSecondGuesses:', gSecondGuesses);
+		//console.log('gPlayers      :', gPlayers      );
+		//console.log('gID           :', gID           );
+		//console.log('gTint         :', gTint         );
+		//console.log('gCurrentPlayer:', gCurrentPlayer);
+	}
+	
+	function allDone()
+	{
+		if (gSecondGuesses == null)
+		{
+			if (gFirstGuesses.length === gPlayers.length - 1)
+			{
+				post('/api/next', {}).then(function () {})
+			}
+		}
+		else
+		{
+			if (gSecondGuesses.length === gPlayers.length - 1)
+			{
+				post('/api/next', {}).then(function () {})
+			}
+		}
 	}
 
 	function guess(row, col)
 	{
-		const addr = `${col}${row}`;
+		const guess = `${col}${row}`;
 		return function()
 		{
 			if (gColour === '')
 			{
 				// First selection, to choose a player colour.
 				gColour = GRID[col][row];
-				console.log(`assigned ${gColour}`);
-				const url = HOST + ':3000/api/add-player';
-				post(url, { name: gName, colour: gColour }).then(updateState);
+				//console.log(`assigned ${gColour}`);
+				post('/api/add-player', { name: gName, colour: gColour }).then(updateState);
 			}
 			else
 			{
-				// Clicked.
-				console.log(`You clicked on ${addr}`);
+				post('/api/guess', { guess, name: gName }).then(function () {})
 			}
 		}
 	}
@@ -148,11 +200,14 @@
 				ret.push(g);
 			}
 		}
-		for (const g of gSecondGuesses)
+		if (gSecondGuesses != null)
 		{
-			if (g.guess === addr)
+			for (const g of gSecondGuesses)
 			{
-				ret.push(g);
+				if (g.guess === addr)
+				{
+					ret.push(g);
+				}
 			}
 		}
 		return ret;
@@ -166,6 +221,15 @@
 			gName = document.getElementById('enter-input').value?.trim() ?? '';
 		}
 	}
+	
+	if (gTimer != null)
+	{
+		clearInterval(gTimer);
+	}
+	gTimer = setInterval(function()
+	{
+		get('/api/poll?name=' + gName).then(updateState);
+	}, 250);
 	
 </script>
 
@@ -182,15 +246,28 @@
 	<div id="header">
 	{#if gColour === ''}
 		<h1>Pick your player colour.</h1>
-	{:else}
-		{#if gTint === ''}
+		<div class="row">
+			<div class="colour hint" style="background-color: #FFFFFF"></div>
+		</div>
+	{:else if gCurrentPlayer == null}
+		<h1>Wait for other players.</h1>
+		<div class="row">
+			<div class="colour hint" style="background-color: #FFFFFF"></div>
+		</div>
+	{:else if gTint === '??'}
 		<h1>Try to guess the tint.</h1>
-		{:else}
+		<div class="row">
+			<div class="colour">1st</div><div class="colour hint" style="background-color: {stringToColour(gFirstGuess)}">{gFirstGuess}</div>
+		{#if gSecondGuesses != null}
+			<div class="colour">2nd</div><div class="colour hint" style="background-color: {stringToColour(gSecondGuess)}">{gSecondGuess}</div>
+		{/if}
+		</div>
+	{:else}
 		<h1>Try to give a hint.</h1>
 		<div class="row">
-			<div class="colour">Your tint</div><div class="colour hint" style="background-color: #00C000">B1</div>
+			<div class="colour">Your tint</div><div class="colour hint" style="background-color: {stringToColour(gTint)}">{gTint}</div>
+			<button onclick={allDone}>OK</button>
 		</div>
-		{/if}
 	{/if}
 	</div>
 	
