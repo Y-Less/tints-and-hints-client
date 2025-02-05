@@ -184,7 +184,7 @@
 			}
 			else
 			{
-				post('/api/guess', { guess, name: gName }).then(function () {})
+				post('/api/guess', { guess, name: gName }).then(updateState);
 			}
 		}
 	}
@@ -229,7 +229,7 @@
 	gTimer = setInterval(function()
 	{
 		get('/api/poll?name=' + gName).then(updateState);
-	}, 250);
+	}, 1000);
 	
 </script>
 
