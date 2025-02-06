@@ -1,26 +1,26 @@
 <script lang="ts">
 	import Selection from './selection.svelte';
-	
+
 	const HOST = 'http://localhost';
-	
+
 	let gName = $state(''); // @hmr:keep
 	let gColour = $state(''); // @hmr:keep
 	let gTint = $state('??'); // @hmr:keep
-	
+
 	let gFirstGuesses = $state([]); // @hmr:keep
 	let gSecondGuesses = $state(null); // @hmr:keep
-	
+
 	let gCurrentPlayer = $state(null); // @hmr:keep
-	
+
 	let gFirstGuess = $state('??'); // @hmr:keep
 	let gSecondGuess = $state('??'); // @hmr:keep
-	
+
 	let gID = $state(-1); // @hmr:keep
-	
+
 	let gTimer = $state(null); // @hmr:keep
-	
+
 	let gPlayers = $state([]); // Don't keep.
-	
+
 	const
 		GRID = {
 			A: [ 'hsl(  0deg   25%   30%)', 'hsl(  0deg   50%   30%)', 'hsl(  0deg   75%   30%)', 'hsl(  0deg  100%   30%)', 'hsl(  0deg  100%   40%)', 'hsl(  0deg  100%   50%)', 'hsl(  0deg  100%   60%)', 'hsl(  0deg  100%   70%)', 'hsl(  0deg  100%   80%)', 'hsl(  0deg  100%   90%)' ],
@@ -71,7 +71,7 @@
 			});
 		});
 	}
-	
+
 	function post(url, body)
 	{
 		return new Promise(function (resolve, reject)
@@ -87,7 +87,7 @@
 			});
 		});
 	}
-	
+
 	function updateState(state)
 	{
 		const { failed } = state;
@@ -132,12 +132,12 @@
 			}
 		}
 	}
-	
+
 	function allDone()
 	{
 		post('/api/next', { name: gName });
 	}
-	
+
 	function guess(row, col)
 	{
 		const guess = `${col}${row}`;
@@ -148,7 +148,7 @@
 				// First selection, to choose a player colour.
 				gColour = GRID[col][row];
 				post('/api/add-player', { name: gName, colour: gColour }).then(updateState);
-				
+
 				if (gTimer != null)
 				{
 					clearInterval(gTimer);
@@ -164,7 +164,7 @@
 			}
 		}
 	}
-	
+
 	function getGuesses(row, col)
 	{
 		const addr = `${col}${row}`;
@@ -188,7 +188,7 @@
 		}
 		return ret;
 	}
-	
+
 	function setName(event)
 	{
 		if (event.keyCode === 13 || event.type === 'click')
@@ -198,57 +198,53 @@
 			get('/api/poll').then(updateState);
 		}
 	}
-	
+
 </script>
 
 <main>
 {#if gName === ''}
-	<div id="header">
-		<h1>Enter your name.</h1>
-		<div id="enter-name">
-			<input id="enter-input" type="text" onkeypress={setName} />
-			<button onclick={setName}>OK</button>
-		</div>
+	<h1 id="title">Enter your name.</h1>
+	<div id="enter-name">
+		<input id="enter-input" type="text" onkeypress={setName} />
+		<button onclick={setName}>OK</button>
 	</div>
 {:else}
-	<div id="header">
 	{#if gColour === ''}
-		<h1>Pick your player colour.</h1>
-		<div class="row">
-			<div class="colour hint" style="background-color: #FFFFFF"></div>
-		</div>
-	{:else if gCurrentPlayer == null}
-		<h1>Wait for other players.</h1>
-		<div class="row">
-			<div class="colour hint" style="background-color: #FFFFFF"></div>
-		</div>
-	{:else if gTint === '??'}
-		<h1>Try to guess the tint.</h1>
-		<div class="row">
-			<div class="colour">1st</div><div class="colour hint" style="background-color: {stringToColour(gFirstGuess)}">{gFirstGuess}</div>
-		{#if gSecondGuesses != null}
-			<div class="colour">2nd</div><div class="colour hint" style="background-color: {stringToColour(gSecondGuess)}">{gSecondGuess}</div>
-		{/if}
-		</div>
-	{:else}
-		<h1>Try to give a hint.</h1>
-		<div class="row">
-			<div class="colour">Your tint</div><div class="colour hint" style="background-color: {stringToColour(gTint)}">{gTint}</div>
-			<button onclick={allDone}>OK</button>
-		</div>
-	{/if}
+	<h1 id="title">Pick your player colour.</h1>
+	<div id="status" class="row">
+		<div class="colour hint" style="background-color: #FFFFFF"></div>
 	</div>
-	
+	{:else if gCurrentPlayer == null}
+	<h1 id="title">Wait for other players.</h1>
+	<div id="status" class="row">
+		<div class="colour hint" style="background-color: #FFFFFF"></div>
+	</div>
+	{:else if gTint === '??'}
+	<h1 id="title">Try to guess the tint.</h1>
+	<div id="status" class="row">
+		<div class="colour">1st</div><div class="colour hint" style="background-color: {stringToColour(gFirstGuess)}">{gFirstGuess}</div>
+		{#if gSecondGuesses != null}
+		<div class="colour">2nd</div><div class="colour hint" style="background-color: {stringToColour(gSecondGuess)}">{gSecondGuess}</div>
+		{/if}
+	</div>
+	{:else}
+	<h1 id="title">Try to give a hint.</h1>
+	<div id="status" class="row">
+		<div class="colour">Your tint</div><div class="colour hint" style="background-color: {stringToColour(gTint)}">{gTint}</div>
+		<button onclick={allDone}>OK</button>
+	</div>
+	{/if}
+
 	<table id="colour-grid">
 		<tbody>
-			<tr>
+			<tr style="height: {100 / (ROWS.length + 1)}%">
 				<th style="width: {100 / (COLS.length + 1)}%"></th>
 {#each COLS as j}
 				<th style="width: {100 / (COLS.length + 1)}%">{j}</th>
 {/each}
 			</tr>
 {#each ROWS as i}
-			<tr>
+			<tr style="height: {100 / (ROWS.length + 1)}%">
 				<th>{i}</th>
 	{#each COLS as j}
 				<td style="background-color: {GRID[j][i]}" onclick={guess(i, j)}>
@@ -280,19 +276,27 @@
 <style>
 	main
 	{
+		height: 100%;
 		text-align: center;
 		display: grid;
-		grid-template-columns: 1fr 300px;
+		grid-template-columns: 1fr 300px 300px;
+		grid-template-rows: 120px 1fr 10px;
 		
-		grid-template-areas: 
-			"header header"
-			"main sidebar"
-			"footer footer";
+		grid-template-areas:
+			"title status status"
+			"main main sidebar"
+			"footer footer footer";
 	}
-	
-	#header
-	{	
-		grid-area: header;
+
+	#title
+	{
+		grid-area: title;
+	}
+
+	#status, #enter-name
+	{
+		grid-area: status;
+		margin: 20px 20px 0 0;
 	}
 
 	h1
@@ -301,6 +305,7 @@
 		text-transform: uppercase;
 		font-size: 4em;
 		font-weight: 100;
+		margin-top: 35px;
 	}
 
 	#colour-grid
@@ -308,8 +313,33 @@
 		height: 100%;
 		width: 100%;
 		table-layout: fixed;
-		border-collapse: collapse;
 		grid-area: main;
+		border-spacing: 0;
+	}
+
+	#colour-grid td, #colour-grid th
+	{
+		border: 0;
+	}
+
+	#colour-grid tbody :first-child :not(:first-child)
+	{
+		border-bottom: 10px solid black;
+	}
+
+	#colour-grid tbody :not(:first-child) :first-child
+	{
+		border-right: 10px solid black;
+	}
+
+	#colour-grid tbody :last-child :not(:first-child)
+	{
+		border-bottom: 10px solid black;
+	}
+
+	#colour-grid tbody :not(:first-child) :last-child
+	{
+		border-right: 10px solid black;
 	}
 
 	#player-grid
@@ -317,30 +347,30 @@
 		grid-area: sidebar;
 		align-self: start;
 	}
-	
+
 	#player-grid table
 	{
 		table-layout: fixed;
 		width: 280px;
 		margin-left: 20px;
 	}
-	
+
 	#player-grid th
 	{
 		width: 30px;
 		height: 30px;
 	}
-	
-	#colour-grid tr
-	{
-		height: 50px;
-	}
-	
+
 	#enter-name
 	{
 		text-align: center;
 	}
 	
+	button
+	{
+		max-height: 100px;
+	}
+
 	input, button
 	{
 		max-width: 500px;
@@ -355,7 +385,7 @@
 		line-height: 100%;
 		font-size: 2em;
 	}
-	
+
 	.colour
 	{
 		font-size: 2em;
@@ -364,7 +394,7 @@
 		width: 100px;
 		height: 100px;
 	}
-	
+
 	.row
 	{
 		display: flex;
