@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Selection from './selection.svelte';
 
-	const HOST = 'http://localhost';
+	const HOST = 'http://y-less.com';
 
 	let gName = $state(''); // @hmr:keep
 	let gColour = $state(''); // @hmr:keep
