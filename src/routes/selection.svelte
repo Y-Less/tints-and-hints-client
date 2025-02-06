@@ -5,7 +5,7 @@
 </script>
 
 {#if index < guesses.length}
-<div class={guesses[index].first ? 'first-selection' : 'second-selection'} style="border-color: #{guesses[index].colour}">
+<div class={guesses[index].first ? 'first-selection' : 'second-selection'} style="border-color: {guesses[index].colour}">
 	<Selection guesses={guesses} index={index + 1} />
 </div>
 {/if}
