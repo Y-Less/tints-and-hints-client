@@ -19,18 +19,7 @@
 	
 	let gTimer = $state(null); // @hmr:keep
 	
-	let gPlayers = $state([
-		{
-			name: 'Alex',
-			score: 1000,
-			colour: 'FF0000',
-		},
-		{
-			name: 'Tom',
-			score: 1000,
-			colour: '00FF00',
-		},
-	]); // @hmr:keep
+	let gPlayers = $state([]); // Don't keep.
 	
 	const
 		GRID = {
@@ -70,8 +59,6 @@
 		{
 			return '#FFFFFF';
 		}
-		//console.log('X: "' + str[0] + '"');
-		//console.log('Y: "' + str[1] + '"');
 		return '#' + GRID[str[0]][str[1]];
 	}
 
@@ -105,7 +92,12 @@
 	
 	function updateState(state)
 	{
-		//console.log(state);
+		const { failed } = state;
+		if (failed != null)
+		{
+			console.error(failed);
+			return;
+		}
 		const {
 			first,
 			second,
@@ -129,11 +121,8 @@
 				break;
 			}
 		}
-		if (gSecondGuesses == null)
-		{
-			gSecondGuess = '??';
-		}
-		else
+		gSecondGuess = '??';
+		if (gSecondGuesses != null)
 		{
 			for (const i of gSecondGuesses)
 			{
@@ -144,32 +133,13 @@
 				}
 			}
 		}
-		//console.log('gFirstGuesses :', gFirstGuesses );
-		//console.log('gSecondGuesses:', gSecondGuesses);
-		//console.log('gPlayers      :', gPlayers      );
-		//console.log('gID           :', gID           );
-		//console.log('gTint         :', gTint         );
-		//console.log('gCurrentPlayer:', gCurrentPlayer);
 	}
 	
 	function allDone()
 	{
-		if (gSecondGuesses == null)
-		{
-			if (gFirstGuesses.length === gPlayers.length - 1)
-			{
-				post('/api/next', {}).then(function () {})
-			}
-		}
-		else
-		{
-			if (gSecondGuesses.length === gPlayers.length - 1)
-			{
-				post('/api/next', {}).then(function () {})
-			}
-		}
+		post('/api/next', { name: gName });
 	}
-
+	
 	function guess(row, col)
 	{
 		const guess = `${col}${row}`;
@@ -179,8 +149,16 @@
 			{
 				// First selection, to choose a player colour.
 				gColour = GRID[col][row];
-				//console.log(`assigned ${gColour}`);
 				post('/api/add-player', { name: gName, colour: gColour }).then(updateState);
+				
+				if (gTimer != null)
+				{
+					clearInterval(gTimer);
+				}
+				gTimer = setInterval(function()
+				{
+					get('/api/poll?name=' + gName).then(updateState);
+				}, 500);
 			}
 			else
 			{
@@ -219,17 +197,9 @@
 		{
 			// Pressed enter in the text box.
 			gName = document.getElementById('enter-input').value?.trim() ?? '';
+			get('/api/poll').then(updateState);
 		}
 	}
-	
-	if (gTimer != null)
-	{
-		clearInterval(gTimer);
-	}
-	gTimer = setInterval(function()
-	{
-		get('/api/poll?name=' + gName).then(updateState);
-	}, 1000);
 	
 </script>
 
